@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Recomendación de Películas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        .results {
+            margin-top: 30px;
+        }
+        
+        .movie-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        
+        .rating {
+            color: #ff9900;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Sistema de Recomendación de Películas</h1>
+        
+        <div class="input-group">
+            <label for="userId">ID de Usuario:</label>
+            <input type="number" id="userId" placeholder="Ingresa tu ID de usuario" min="1">
+            <button onclick="getRecommendations()">Obtener Recomendaciones</button>
+        </div>
+        
+        <div class="input-group">
+            <input type="text" id="searchMovie" placeholder="Buscar películas...">
+            <button onclick="searchMovies()">Buscar</button>
+        </div>
+        
+        <div id="results" class="results">
+            <!-- Los resultados se mostrarán aquí -->
+        </div>
+    </div>
+
+    <script>
+        async function getRecommendations() {
+            const userId = document.getElementById('userId').value;
+            if (!userId) {
+                alert('Por favor ingresa un ID de usuario');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/recommend', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        top_n: 10
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                
+                displayResults(data.recommendations, `Recomendaciones para usuario ${userId}`);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al obtener recomendaciones');
+            }
+        }
+        
+        async function searchMovies() {
+            const searchTerm = document.getElementById('searchMovie').value;
+            
+            try {
+                const response = await fetch(`/movies?search=${encodeURIComponent(searchTerm)}&limit=20`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                
+                displayResults(data.movies, `Resultados de búsqueda: "${searchTerm}"`);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al buscar películas');
+            }
+        }
+        
+        function displayResults(items, title) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (items.length === 0) {
+                resultsDiv.innerHTML = '<p>No se encontraron resultados</p>';
+                return;
+            }
+            
+            let html = `<h2>${title}</h2>`;
+            
+            items.forEach(item => {
+                html += `
+                    <div class="movie-card">
+                        <h3>${item.title}</h3>
+                        <p><strong>Géneros:</strong> ${item.genres}</p>
+                        ${item.predicted_rating ? 
+                            `<p class="rating">Rating predicho: ${item.predicted_rating.toFixed(1)}/5</p>` : ''}
+                        ${item.movieId ? `<p><strong>ID:</strong> ${item.movieId}</p>` : ''}
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
